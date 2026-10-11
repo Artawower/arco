@@ -2,23 +2,32 @@ name: Main Branch CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   test:
     uses: ./.github/workflows/test.yml
 
   integration-tests:
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/integration_tests.yml
 
   release-please:
+    permissions:
+      contents: write
+      pull-requests: write
     needs: [test, integration-tests]
     uses: ./.github/workflows/release-please.yml
 
   build:
+    permissions:
+      contents: write
     needs: [test, integration-tests, release-please]
     uses: ./.github/workflows/build.yml
     with:
-      push_artifacts: ${{ needs.release-please.outputs.release_created == 'true' }}
+      push_artifacts: >-
+        ${{ needs.release-please.outputs.release_created == 'true' }}
       version: ${{ needs.release-please.outputs.tag_name }}
     secrets: inherit

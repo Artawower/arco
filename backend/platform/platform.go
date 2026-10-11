@@ -16,6 +16,9 @@ func IsMacOS() bool {
 
 func GithubAssetName() string {
 	if IsLinux() {
+		if runtime.GOARCH == "arm64" {
+			return "arco-linux-arm64.zip"
+		}
 		return "arco-linux.zip"
 	}
 	if IsMacOS() {

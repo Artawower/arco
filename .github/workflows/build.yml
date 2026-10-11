@@ -23,10 +23,18 @@ jobs:
       fail-fast: false
       matrix:
         # Build Arco for Linux and MacOS
-        build: [
-          { zip-name: arco-linux, platform: linux/amd64, os: ubuntu-latest },
-          { zip-name: arco-macos, platform: darwin/universal, os: macos-latest }
-        ]
+        build:
+          - zip-name: arco-linux
+            package-arch: amd64
+            platform: linux/amd64
+            os: ubuntu-latest
+          - zip-name: arco-linux-arm64
+            package-arch: arm64
+            platform: linux/arm64
+            os: ubuntu-24.04-arm
+          - zip-name: arco-macos
+            platform: darwin/universal
+            os: macos-latest
     runs-on: ${{ matrix.build.os }}
     outputs:
       artifacts: ${{ steps.artifacts.outputs.list }}
@@ -268,24 +276,28 @@ jobs:
         id: prepare-linux
         run: |
           cd ./bin
-          # Create zip for manual install
-          zip -j "../arco-linux.zip" arco
+          # Create zip for manual install and auto-updater
+          zip -j "../${{ matrix.build.zip-name }}.zip" arco
           # Rename packages for release
-          mv arco.deb "arco-linux-amd64.deb" 2>/dev/null || true
-          mv arco.rpm "arco-linux-amd64.rpm" 2>/dev/null || true
-          mv arco.pkg.tar.zst "arco-linux-amd64.pkg.tar.zst" 2>/dev/null || true
+          mv arco.deb "arco-linux-${{ matrix.build.package-arch }}.deb" \
+            2>/dev/null || true
+          mv arco.rpm "arco-linux-${{ matrix.build.package-arch }}.rpm" \
+            2>/dev/null || true
+          mv arco.pkg.tar.zst \
+            "arco-linux-${{ matrix.build.package-arch }}.pkg.tar.zst" \
+            2>/dev/null || true
 
       # Upload build assets
       - name: Upload build artifacts (Linux)
         if: steps.should-build.outputs.should_run == 'true' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: arco-linux
+          name: ${{ matrix.build.zip-name }}
           path: |
-            arco-linux.zip
-            bin/arco-linux-amd64.deb
-            bin/arco-linux-amd64.rpm
-            bin/arco-linux-amd64.pkg.tar.zst
+            ${{ matrix.build.zip-name }}.zip
+            bin/arco-linux-${{ matrix.build.package-arch }}.deb
+            bin/arco-linux-${{ matrix.build.package-arch }}.rpm
+            bin/arco-linux-${{ matrix.build.package-arch }}.pkg.tar.zst
           retention-days: 30
 
       - name: Upload build artifacts (macOS)
@@ -305,10 +317,10 @@ jobs:
         with:
           tag_name: ${{ inputs.version }}
           files: |
-            arco-linux.zip
-            bin/arco-linux-amd64.deb
-            bin/arco-linux-amd64.rpm
-            bin/arco-linux-amd64.pkg.tar.zst
+            ${{ matrix.build.zip-name }}.zip
+            bin/arco-linux-${{ matrix.build.package-arch }}.deb
+            bin/arco-linux-${{ matrix.build.package-arch }}.rpm
+            bin/arco-linux-${{ matrix.build.package-arch }}.pkg.tar.zst
           draft: false
           prerelease: false
 

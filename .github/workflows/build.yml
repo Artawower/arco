@@ -1,6 +1,7 @@
 name: Build Application
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       push_artifacts:
@@ -80,6 +81,7 @@ jobs:
           echo "✅ Version validation passed: $VERSION"
 
       - name: Check for relevant changes
+        if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v3
         id: changes
         with:
@@ -96,12 +98,22 @@ jobs:
 
       - name: Check if build should run
         id: should-build
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Always build if artifacts should be pushed (release scenario)
-          if [ "${{ inputs.push_artifacts }}" = "true" ]; then
-            echo "reason=release" >> $GITHUB_OUTPUT
+          # Always build when manually triggered or publishing a release
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            BUILD_REQUIRED=true
+            BUILD_REASON=manual
+          else
+            BUILD_REQUIRED="${{ inputs.push_artifacts }}"
+            BUILD_REASON=release
+          fi
+
+          if [ "$BUILD_REQUIRED" = "true" ]; then
+            echo "reason=$BUILD_REASON" >> $GITHUB_OUTPUT
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "Build required: Release artifacts needed"
+            echo "Build required: $BUILD_REASON"
           # Build if relevant files changed
           elif [ "${{ steps.changes.outputs.build }}" = "true" ]; then
             echo "reason=changes" >> $GITHUB_OUTPUT
